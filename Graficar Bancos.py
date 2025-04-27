@@ -1,4 +1,3 @@
-#Graficar Bancos
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -53,7 +52,6 @@ def generar_malla_rectangular(burden, espaciamiento, orientacion_grados, num_fil
                 'X_Base': x_base,
                 'Y_Base': y_base
             })
-            # id_pozo_counter += 1 # Ya no es necesario aquí
 
     df_base = pd.DataFrame(coordenadas_base)
 
@@ -97,20 +95,8 @@ def visualizar_malla(df_coordenadas, burden, espaciamiento, orientacion_grados):
     # Graficar los puntos (pozos)
     plt.scatter(df_coordenadas['Coord_X'], df_coordenadas['Coord_Y'], marker='o', color='blue', s=50, label='Pozos')
 
-    # Opcional: Etiquetar cada pozo con su ID o Fila/Columna
-    # for index, row in df_coordenadas.iterrows():
-    #     plt.text(row['Coord_X'], row['Coord_Y'], f"({row['Fila']},{row['Columna']})", fontsize=8, ha='left')
-         # o plt.text(row['Coord_X'], row['Coord_Y'], row['ID_Pozo'], fontsize=8, ha='left')
 
 
-    # Mejorar la visualización
-    plt.title(f'Vista en Planta de Malla de Perforación\nBurden={burden}m, Espaciamiento={espaciamiento}m, Orientación={orientacion_grados}°')
-    plt.xlabel('Coordenada X (Este) [m]')
-    plt.ylabel('Coordenada Y (Norte) [m]')
-    plt.grid(True)          # Mostrar cuadrícula
-    plt.axis('equal')       # Asegurar que las unidades en X e Y tengan la misma escala
-    plt.axhline(0, color='grey', lw=0.5) # Eje X (Este)
-    plt.axvline(0, color='grey', lw=0.5) # Eje Y (Norte)
     plt.legend()
     plt.show()
 
