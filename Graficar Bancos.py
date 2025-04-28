@@ -1,139 +1,169 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from shapely.geometry import Point # Aunque no usamos Point directamente en esta versión simple, la importación es buena práctica si expandes
+from shapely.geometry import Point
 
 
-def generar_malla_rectangular(burden, espaciamiento, orientacion_grados, num_filas, num_columnas):
+def generate_rectangular_pattern(burden, spacing, azimuth_degrees, num_rows, num_cols):
     """
-    Genera las coordenadas (X, Y) en 2D para una malla de perforación rectangular
-    y las guarda en un DataFrame de Pandas.
+    Generates 2D (X, Y) coordinates for a rectangular drilling pattern
+    and stores them in a Pandas DataFrame.
 
     Args:
-        burden (float): Distancia entre filas (metros).
-        espaciamiento (float): Distancia entre pozos en una fila (metros).
-        orientacion_grados (float): Ángulo de orientación de la malla en grados.
-                                    Se mide desde el eje X positivo (Este),
-                                    girando en sentido anti-horario.
-                                    Un ángulo de 0 grados significa que las líneas
-                                    de burden son paralelas al eje X.
-                                    Un ángulo de 90 grados significa que las líneas
-                                    de
-                                    burden son paralelas al eje Y (Norte).
-        num_filas (int): Número de filas de pozos en la dirección del burden.
-        num_columnas (int): Número de columnas de pozos en la dirección del espaciamiento.
+        burden (float): Distance between rows (meters).
+        spacing (float): Distance between holes in a row (meters).
+        azimuth_degrees (float): Orientation angle of the pattern in degrees.
+                                 Measured clockwise from North (positive Y-axis).
+                                 An azimuth of 0 degrees means rows are parallel to the X-axis (East-West).
+                                 An azimuth of 90 degrees means rows are parallel to the Y-axis (North-South).
+        num_rows (int): Number of rows of holes (in the burden direction).
+        num_cols (int): Number of columns of holes (in the spacing direction).
 
     Returns:
-        pandas.DataFrame: DataFrame con las columnas 'ID_Pozo', 'Fila', 'Columna', 'Coord_X', 'Coord_Y'.
+        pandas.DataFrame: DataFrame with columns 'Hole_ID', 'Row', 'Col', 'Coord_X', 'Coord_Y'.
     """
-    # Convertir orientación a radianes para las funciones trigonométricas de numpy
-    orientacion_radianes = np.radians(orientacion_grados)
+    # --- Calculate rotation angle for np.cos/sin ---
+    # np.cos/sin expect angle counter-clockwise from positive X (East).
+    # Azimuth is clockwise from positive Y (North).
+    # Angle from +X counter-clockwise = 90 degrees - Azimuth clockwise from +Y
+    rotation_radians_from_east = np.radians(90 - azimuth_degrees)
 
-    # --- Generar coordenadas en una malla base sin rotación ---
-    # Consideramos la primera perforación (en la primera fila y columna) en el origen (0,0).
-    # Las filas se extienden en la dirección 'Burden' y las columnas en la dirección 'Espaciamiento'.
-    # En la malla base no rotada, asumimos que el Espaciamiento es a lo largo del eje X
-    # y el Burden a lo largo del eje Y.
+    # --- Generate base coordinates without rotation ---
+    # We consider the first hole (in the first row and column) at the origin (0,0).
+    # Rows extend in the 'Burden' direction and columns in the 'Spacing' direction.
+    # In the non-rotated base grid, we assume Spacing is along the X axis
+    # and Burden is along the Y axis.
 
-    coordenadas_base = []
-    # No necesitamos un ID de pozo base temporal, podemos generarlo al final
-    # id_pozo_counter = 1 # Para asignar un ID secuencial a los pozos
+    base_coordinates = []
 
-    for i in range(num_filas): # i = índice de la fila (0 a num_filas-1)
-        for j in range(num_columnas): # j = índice de la columna (0 a num_columnas-1)
-            # Coordenadas en la malla base (no rotada)
-            # X aumenta con el espaciamiento (columnas), Y aumenta con el burden (filas)
-            x_base = j * espaciamiento
-            y_base = i * burden
+    for i in range(num_rows): # i = row index (0 to num_rows-1)
+        for j in range(num_cols): # j = column index (0 to num_cols-1)
+            # Coordinates in the base grid (non-rotated)
+            # X increases with spacing (columns), Y increases with burden (rows)
+            base_x = j * spacing
+            base_y = i * burden
 
-            coordenadas_base.append({
-                'Fila': i,
-                'Columna': j,
-                'X_Base': x_base,
-                'Y_Base': y_base
+            base_coordinates.append({
+                'Row': i,
+                'Col': j,
+                'Base_X': base_x,
+                'Base_Y': base_y
             })
 
-    df_base = pd.DataFrame(coordenadas_base)
+    df_base = pd.DataFrame(base_coordinates)
 
-    # --- Aplicar la rotación a cada punto ---
-    # La rotación se aplica alrededor del origen (0,0).
-    # Si quisieras rotar alrededor del centro de la malla,
-    # tendrías que trasladar los puntos para que el centro quede en (0,0),
-    # rotar, y luego trasladarlos de vuelta. Para este caso simple de vista en planta,
-    # rotar alrededor del origen donde comienza la malla base es suficiente.
+    # --- Apply rotation to each point ---
+    # Rotation is applied around the origin (0,0).
+    # If you wanted to rotate around the center of the pattern,
+    # you would need to translate the points so the center is at (0,0),
+    # rotate, and then translate them back. For this simple top-down view,
+    # rotating around the origin where the base grid starts is sufficient.
 
-    cos_theta = np.cos(orientacion_radianes)
-    sin_theta = np.sin(orientacion_radianes)
+    cos_theta = np.cos(rotation_radians_from_east)
+    sin_theta = np.sin(rotation_radians_from_east)
 
-    # Aplicar la fórmula de rotación a cada punto
-    # X_rotado = X_base * cos(theta) - Y_base * sin(theta)
-    # Y_rotado = X_base * sin(theta) + Y_base * cos(theta)
-    df_base['Coord_X'] = df_base['X_Base'] * cos_theta - df_base['Y_Base'] * sin_theta
-    df_base['Coord_Y'] = df_base['X_Base'] * sin_theta + df_base['Y_Base'] * cos_theta
+    # Apply the rotation formula to each point
+    # X_rotated = X_base * cos(theta) - Y_base * sin(theta)
+    # Y_rotated = X_base * sin(theta) + Y_base * cos(theta)
+    df_base['Coord_X'] = df_base['Base_X'] * cos_theta - df_base['Base_Y'] * sin_theta
+    df_base['Coord_Y'] = df_base['Base_X'] * sin_theta + df_base['Base_Y'] * cos_theta
 
-    # Seleccionar y renombrar las columnas finales
-    df_coordenadas = df_base[['Fila', 'Columna', 'Coord_X', 'Coord_Y']].copy()
-    # Asignar un ID de pozo más amigable, si no usaste el ID_Pozo_Base
-    df_coordenadas['ID_Pozo'] = [f'P-{i+1:03d}' for i in df_coordenadas.index]
-    df_coordenadas = df_coordenadas[['ID_Pozo', 'Fila', 'Columna', 'Coord_X', 'Coord_Y']] # Reordenar columnas
+    # Assign Hole IDs and select/reorder final columns
+    df_coords = df_base[['Row', 'Col', 'Coord_X', 'Coord_Y']].copy()
+    df_coords['Hole_ID'] = [f'P-{i+1:03d}' for i in df_coords.index] # Assign sequential ID like P-001, P-002...
+    df_coords = df_coords[['Hole_ID', 'Row', 'Col', 'Coord_X', 'Coord_Y']] # Reorder columns
 
 
-    return df_coordenadas
+    return df_coords
 
-def visualizar_malla(df_coordenadas, burden, espaciamiento, orientacion_grados):
+def visualize_pattern(df_coords, burden, spacing, azimuth_degrees):
     """
-    Genera una vista en planta de la malla de perforación.
+    Generates a top-down view plot of the drilling pattern and labels holes.
 
     Args:
-        df_coordenadas (pandas.DataFrame): DataFrame generado por generar_malla_rectangular.
-        burden (float): Distancia entre filas (usado para título).
-        espaciamiento (float): Distancia entre pozos (usado para título).
-        orientacion_grados (float): Ángulo de orientación (usado para título).
+        df_coords (pandas.DataFrame): DataFrame generated by generate_rectangular_pattern.
+        burden (float): Distance between rows (used for title).
+        spacing (float): Distance between holes (used for title).
+        azimuth_degrees (float): Azimuth angle (used for title).
     """
-    plt.figure(figsize=(10, 8)) # Tamaño de la figura
+    plt.figure(figsize=(10, 8)) # Figure size
 
-    # Graficar los puntos (pozos)
-    plt.scatter(df_coordenadas['Coord_X'], df_coordenadas['Coord_Y'], marker='o', color='blue', s=50, label='Pozos')
+    # Plot the points (holes)
+    # s is marker size
+    plt.scatter(df_coords['Coord_X'], df_coords['Coord_Y'], marker='o', color='blue', s=50, label='Holes')
 
+    # --- Add labels for each hole ---
+    # Iterate through the DataFrame and add text label for each point
+    for index, row in df_coords.iterrows():
+        # plt.text(x, y, text, ...)
+        plt.text(
+            row['Coord_X'],
+            row['Coord_Y'],
+            row['Hole_ID'], # The text to display
+            fontsize=8,      # Font size
+            ha='left',       # Horizontal alignment ('left', 'center', 'right')
+            va='bottom'      # Vertical alignment ('top', 'center', 'bottom')
+            # xytext=(5, 5),   # Optional: Offset text position (pixels)
+            # textcoords='offset points'
+        )
 
+    # Improve visualization
+    plt.title(f'Top View of Drilling Pattern\nBurden={burden}m, Spacing={spacing}m, Azimuth={azimuth_degrees}° (from North, clockwise)')
+    plt.xlabel('East Coordinate (m)')
+    plt.ylabel('North Coordinate (m)')
+    plt.grid(True)          # Show grid
+    plt.axis('equal')       # Ensure equal scaling on both axes
+    plt.axhline(0, color='grey', lw=0.5, linestyle='--') # X-axis (East-West)
+    plt.axvline(0, color='grey', lw=0.5, linestyle='--') # Y-axis (North-South)
+    # Optional: Add labels for North, South, East, West axes if desired
+    # plt.text(plt.xlim()[1]*0.9, 0, 'East', ha='center', va='bottom')
+    # plt.text(plt.xlim()[0]*0.9, 0, 'West', ha='center', va='bottom')
+    # plt.text(0, plt.ylim()[1]*0.9, 'North', ha='left', va='center')
+    # plt.text(0, plt.ylim()[0]*0.9, 'South', ha='left', va='center')
 
-    plt.legend()
+    # No need for legend if all points are labeled individually
+    # plt.legend()
     plt.show()
 
 
-# --- Ejemplo de Uso ---
-# --- ACA CAMBIAR VALORES---
+# --- Example Usage with User Input ---
 if __name__ == "__main__":
-    # Inputs definidos por el usuario
-    burden_input = 6.0      # metros
-    espaciamiento_input = 6.0 # metros
-    orientacion_input = 30  # grados (30 grados anti-horario desde el Este)
-                            # Un ángulo de 90º rotaría la malla para que Burden esté a lo largo del Eje Y (Norte)
-    num_filas_input = 5
-    num_columnas_input = 7
+    print("--- Rectangular Drilling Pattern Generator ---")
 
-    print(f"Generando malla con B={burden_input}m, S={espaciamiento_input}m, Orientación={orientacion_input}°")
-    print(f"Malla de {num_filas_input} filas x {num_columnas_input} columnas.")
+    # Get inputs from the user
+    try:
+        burden_input = float(input("Enter Burden distance (in meters): "))
+        spacing_input = float(input("Enter Spacing distance (in meters): "))
+        azimuth_input = float(input("Enter Azimuth (in degrees, 0=North, clockwise): "))
+        num_rows_input = int(input("Enter number of rows: "))
+        num_cols_input = int(input("Enter number of columns: "))
 
-    # Generar las coordenadas de la malla
-    df_coordenadas_malla = generar_malla_rectangular(
+    except ValueError:
+        print("Invalid input. Please ensure you enter numerical values for distances and integers for counts.")
+        exit() # Exit the script if input is invalid
+
+    print(f"\nGenerating pattern with Burden={burden_input}m, Spacing={spacing_input}m, Azimuth={azimuth_input}°")
+    print(f"Pattern of {num_rows_input} rows x {num_cols_input} columns.")
+
+    # Generate the pattern coordinates
+    df_pattern_coords = generate_rectangular_pattern(
         burden_input,
-        espaciamiento_input,
-        orientacion_input,
-        num_filas_input,
-        num_columnas_input
+        spacing_input,
+        azimuth_input,
+        num_rows_input,
+        num_cols_input
     )
 
-    # Mostrar las coordenadas generadas
-    print("\nCoordenadas de los Pozos (en el plano 2D):")
-    print(df_coordenadas_malla)
+    # Display the generated coordinates
+    print("\nHole Coordinates (2D Plane):")
+    print(df_pattern_coords)
 
-    # Visualizar la malla en planta
-    visualizar_malla(
-        df_coordenadas_malla,
+    # Visualizar la malla en planta con etiquetas
+    visualize_pattern(
+        df_pattern_coords,
         burden_input,
-        espaciamiento_input,
-        orientacion_input
+        spacing_input,
+        azimuth_input
     )
 
-    print("\nProceso completado.")
+    print("\nProcess completed.")
