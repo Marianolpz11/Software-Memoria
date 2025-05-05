@@ -82,3 +82,23 @@ def kuz_ram(Fr, VR0, Q, PRP, u):
     Tbc = Tb / (0.693 ** (1 / u))
 
     return Tb, Tbc
+
+def brw_x50(B, A, f, e, q):
+    """
+    Calcula x50 (tamaño medio de fragmentos) según el modelo BRW corregido.
+    
+    Parámetros:
+    B: Piedra o burden (m)
+    A: Parámetro del macizo rocoso (adimensional)
+    f: Factor de geometría (adimensional)
+    e: Energía del explosivo (J/kg)
+    q: Concentración lineal de carga (kg/m)
+
+    Retorna:
+    x50: Tamaño medio de fragmentos
+    """
+    if any(val <= 0 for val in [B, A, f, e, q]):
+        raise ValueError("Todos los parámetros deben ser mayores que cero.")
+
+    denominador = f * e * q * 0.67
+    return B * (A / denominador)
