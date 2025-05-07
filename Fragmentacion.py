@@ -11,7 +11,7 @@ def larsson_k50(S, B, CE, c):
     c: Constante de roca (~0.3–0.5 kg/m³)
 
     Retorna:
-    K50: Tamaño medio de fragmento (cm o mm, según unidades)
+    K50: Tamaño medio de fragmento (cm)
     """
     if any(val <= 0 for val in [S, B, CE, c]):
         raise ValueError("Todos los parámetros deben ser mayores que cero.")
@@ -38,7 +38,7 @@ def svedepo_k50(S, T, L, B, CE, c):
     c: Constante de roca (~0.3–0.5)
 
     Retorna:
-    K50: Tamaño medio de fragmento (cm o mm, según unidades)
+    K50: Tamaño medio de fragmento (cm)
     """
     if any(val <= 0 for val in [S, T, L, B, CE, c]):
         raise ValueError("Todos los parámetros deben ser mayores que cero.")
