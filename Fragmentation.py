@@ -102,3 +102,27 @@ def brw_x50(B, A, f, e, q):
 
     denominador = f * e * q * 0.67
     return B * (A / denominador)
+
+def kou_rustan_x50(VD, factor_roca, CE, S, B, eta):
+    """
+    Calcula x50 usando la fórmula corregida de Kou–Rustan (SAROBLAST).
+
+    Parámetros:
+    VD: Velocidad de detonación (m/s)
+    factor_roca: Factor de roca (adimensional)
+    CE: Consumo específico de explosivo (kg/m³)
+    S: Espaciamiento (m)
+    B: Piedra o burden (m)
+    eta: Longitud de la carga total / profundidad del barreno (m)
+
+    Retorna:
+    x50: Tamaño medio de fragmento (m)
+    """
+    if any(val <= 0 for val in [VD, factor_roca, CE, S, B, eta]):
+        raise ValueError("Todos los parámetros deben ser mayores que cero.")
+    
+    numerador = factor_roca ** 0.6 * (B * S) ** 0.5
+    denominador = eta ** 0.7 * VD ** 0.4 * CE
+    x50 = (0.01 / (B ** 0.5)) * (numerador / denominador)
+    return x50
+
