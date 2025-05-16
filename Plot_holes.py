@@ -1,4 +1,4 @@
-# pattern_from_polygon_polyline_face_v7.py - Add CSV Output
+# pattern_from_polygon_polyline_face_v9.py - Set default plot limits for interactive input
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -398,21 +398,36 @@ def get_polygon_from_user_input_click(df_coords=None):
     if df_coords is not None and not df_coords.empty:
          plt.scatter(df_coords['Coord_X'], df_coords['Coord_Y'], c='gray', alpha=0.5, label='Pozos Referencia')
          plt.legend()
+         # Set limits based on existing data with some padding
+         min_x, max_x = df_coords['Coord_X'].min(), df_coords['Coord_X'].max()
+         min_y, max_y = df_coords['Coord_Y'].min(), df_coords['Coord_Y'].max()
+         x_range = max_x - min_x if max_x is not None and min_x is not None and max_x - min_x > 10 else 20 # Ensure minimum range, handle None
+         y_range = max_y - min_y if max_y is not None and min_y is not None and max_y - min_y > 10 else 20
+         plt.xlim(min_x - x_range*0.1, max_x + x_range*0.1)
+         plt.ylim(min_y - y_range*0.1, max_y + y_range*0.1)
     else:
          plt.title("Haz clic para definir polígono (mínimo 3 puntos).")
          plt.xlabel("Este (m)")
          plt.ylabel("Norte (m)")
          plt.grid(True)
          plt.axis('equal')
+         # Set reasonable default limits for an empty plot
+         default_limit = 100 # Adjust this value as needed for typical mining scales
+         plt.xlim(-default_limit, default_limit)
+         plt.ylim(-default_limit, default_limit)
 
 
     plt.show(block=False) # Mostrar sin bloquear para que ginput funcione
-    plt.pause(0.1) # Pausa breve para que se muestre el gráfico
+    plt.pause(0.5) # Pausa breve aumentada
+
+    print(">>> Por favor, enfoca la ventana del gráfico que acaba de aparecer y haz clic en ella para definir los vértices.")
+    print(">>> Luego, pulsa ENTER en la ventana del gráfico (NO aquí en la consola) cuando hayas terminado (mínimo 3 puntos).")
+
 
     try:
+        # ginput captures clicks on the currently active figure
         points = plt.ginput(n=-1, timeout=0, show_clicks=True)
-        plt.close() # Cerrar la ventana del gráfico después de capturar clics
-
+        plt.close() # Cerrar la ventana
         if len(points) < 3:
             print("Advertencia: Se necesitan al menos 3 puntos para formar un polígono. No se definió polígono.")
             return None
@@ -515,7 +530,7 @@ if __name__ == "__main__":
 
         if mode == "I":
              # get_polygon_from_user_input_click necesita df_coords para referencia, pero aquí no tenemos aún.
-             # Pasamos None para que muestre un gráfico vacío.
+             # Pasamos None para que muestre un gráfico vacío con límites predeterminados.
              main_polygon = get_polygon_from_user_input_click(None)
         elif mode == "C":
              main_polygon = get_polygon_from_user_input_manual()
@@ -540,6 +555,7 @@ if __name__ == "__main__":
 
     try:
         # Llama a la función para seleccionar la polilínea usando los índices de los vértices del polígono
+        # Aquí pasamos el main_polygon para que se muestren sus vértices como referencia en el gráfico interactivo
         free_face_points = get_free_face_polyline_from_polygon(main_polygon)
 
         if not free_face_points: # get_free_face_polyline_from_polygon retorna lista vacía si se cancela o hay error
