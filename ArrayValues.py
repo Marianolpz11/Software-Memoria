@@ -35,7 +35,7 @@ def generate_populate(ax,df_filled,retacado,charge_length, diameter, density, ma
         mayor_dim = dim_y      
     L = mayor_dim
     #d = mayor_dim / 5  # paso de 10% de la mayor dimensión
-    d= 3
+    d= 1
 
     matriz_energia, xc, yc, zc = generate_3d_array(centro, L, d)
 
