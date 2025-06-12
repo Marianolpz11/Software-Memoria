@@ -16,6 +16,8 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import BoundaryNorm
+from matplotlib.cm import get_cmap
 
 from Vibrations import holmberg_persson  # Función de vibración de Holmberg-Persson
 
@@ -25,8 +27,8 @@ CHARGE_LENGTH = 10.0    # [m] largo de explosivo dentro del pozo
 DIAMETER      = 150     # [m] diámetro del pozo
 DENSITY       = 0.8     # [g/cm3] densidad del explosivo
 # Constantes del modelo de vibración
-CONST_K       = 1.0     # constante K (ajustar según calibración)
-CONST_A       = 0.7     # exponente a (ajustar según calibración)
+CONST_K       = 150     # constante K (ajustar según calibración)
+CONST_A       = 0.8     # exponente a (ajustar según calibración)
 
 # Archivos de entrada
 tipo_csv    = "pozos_filtrados.csv"
@@ -35,6 +37,16 @@ polygon_csv = "polygon.csv"
 # Resolución de la grilla XY y margen
 PASO_GRID = 0.5      # [m]
 MARGEN_REL = 0.1     # Margen relativo (10%)
+
+
+# Constantes para el cálculo de ppv
+young = 70  # [GPa] módulo de Young del terreno
+v_p = 2500 # [m/s] velocidad de onda P
+r_traccion = 15 # [Mpa] resistencia a la tracción del terreno
+ppv_c = (v_p * r_traccion) / (young)  
+
+print(f"PPV_Critico calculado: {ppv_c:.2f} mm/s")
+
 
 
 def main():
@@ -97,23 +109,39 @@ def main():
     xx = xx.ravel()
     yy = yy.ravel()
 
-
+    
+      # para capturar todo lo que supere 4·perros
     # 6) Definir cotas a evaluar
     #cotas = list(np.arange(0, -18, -3))  # Ajusta según necesites
+    
+    
 
     z_cota = 0  # Cota específica a evaluar (puedes cambiarla)
     print(f"→ Procesando cota z = {z_cota:.2f} m")
     
     vibrations = holmberg_persson(xx, yy, z_cota, charges_collar, charges_toe, DIAMETER, DENSITY, CONST_K, CONST_A)
+    # Definimos los umbrales:
+    thresholds = [
+        0,
+        0.25 * ppv_c,
+        1.0  * ppv_c,
+        4.0  * ppv_c,
+        vibrations.max()
+        ]
+    #levels = 10
+    # Creamos un colormap discreto de 4 colores:
+    cmap = get_cmap("viridis", len(thresholds) - 1)
 
-    levels = 10
-       
+    # Norm que asocia valores a intervalos:
+    norm = BoundaryNorm(thresholds, ncolors=cmap.N, clip=True)
 
     plt.figure(figsize=(12, 10))
     cs = plt.tricontourf(xx, yy, vibrations,
-                        levels=levels,
-                        cmap="viridis",
-                        antialiased=True)
+                        levels=thresholds,
+                        cmap=cmap,
+                        norm=norm,
+                        antialiased=True,
+                        extend="max")
     cbar = plt.colorbar(cs, pad=0.02)
     cbar.set_label("Vibraciones (mm/s)")
 
